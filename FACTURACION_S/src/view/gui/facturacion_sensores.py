@@ -1,33 +1,31 @@
-"""
-Interfaz gráfica (Kivy) para el Sistema de Facturación de Sensores.
 
-Mantiene la misma lógica de negocio del proyecto original
-(src/model/logica_sensores.py) pero con un diseño moderno:
-tarjeta central, colores, botones redondeados y un desglose
-completo de la factura (subtotal, IVA 19% y total a pagar).
-
-Cómo ejecutar (desde la carpeta FACTURACION_S):
-    python src/view/gui/facturacion_sensores.py
-"""
 
 from datetime import date
 
 from kivy.app import App
 from kivy.lang import Builder
 from kivy.core.window import Window
+from kivy.core.audio import SoundLoader
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.floatlayout import FloatLayout
 from kivy.uix.textinput import TextInput
 from kivy.uix.button import Button
 from kivy.uix.label import Label
-from kivy.properties import ListProperty, StringProperty
+from kivy.properties import ListProperty, StringProperty, BooleanProperty
 from kivy.animation import Animation
 from kivy.metrics import dp
 
 import sys
 import os
 
-# --- Import de la lógica de negocio (igual que en el proyecto original) ---
+
+NOMBRE_ARCHIVO_MUSICA = "Anuel AA - 3 Some (Letra Lyrics).mp3"
+RUTA_MUSICA = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)), "assets", NOMBRE_ARCHIVO_MUSICA
+)
+VOLUMEN_MUSICA = 0.4  # entre 0.0 (silencio) y 1.0 (volumen máximo)
+
+
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
 sys.path.append("src")
 try:
@@ -44,13 +42,11 @@ except ImportError:
     )
 
 
-# ---------------------------------------------------------------------------
-# Paleta de colores (tema oscuro, estilo "tech / sensores")
-# ---------------------------------------------------------------------------
-COLOR_FONDO = "#0F172A"       # azul muy oscuro
-COLOR_TARJETA = "#16213E"     # azul oscuro tarjeta
+
+COLOR_FONDO = "#0F172A"       
+COLOR_TARJETA = "#16213E"     
 COLOR_TARJETA_2 = "#1B2A4A"
-COLOR_ACENTO = "#22D3B8"      # turquesa (acento principal)
+COLOR_ACENTO = "#22D3B8"      
 COLOR_ACENTO_OSCURO = "#17A992"
 COLOR_TEXTO = "#F1F5F9"
 COLOR_TEXTO_SUAVE = "#94A3B8"
@@ -114,6 +110,28 @@ KV = """
             size: self.size
             radius: [dp(12)]
 
+<BotonMusica>:
+    background_normal: ''
+    background_down: ''
+    background_color: 0, 0, 0, 0
+    color: 0.85, 0.87, 0.92, 1
+    font_size: '12sp'
+    bold: True
+    size_hint: None, None
+    size: dp(96), dp(30)
+    canvas.before:
+        Color:
+            rgba: (0.13, 0.83, 0.72, 0.22) if self.activo else (0.16, 0.22, 0.35, 1)
+        RoundedRectangle:
+            pos: self.pos
+            size: self.size
+            radius: [dp(15)]
+        Color:
+            rgba: (0.13, 0.83, 0.72, 1) if self.activo else (0.32, 0.4, 0.56, 1)
+        Line:
+            rounded_rectangle: (self.x, self.y, self.width, self.height, dp(15))
+            width: 1
+
 <BotonSecundario>:
     background_normal: ''
     background_down: ''
@@ -140,7 +158,7 @@ KV = """
 
 
 class CampoInput(TextInput):
-    """TextInput con fondo/borde propios (color normal o color de error)."""
+    
     fondo_color = ListProperty([0.06, 0.12, 0.24, 1])
     borde_color = ListProperty([0.17, 0.24, 0.39, 1])
 
@@ -152,7 +170,7 @@ class CampoInput(TextInput):
 
 
 class BotonAccion(Button):
-    """Botón principal (turquesa) con leve animación al presionar."""
+    
     fondo_color = ListProperty([0.13, 0.83, 0.72, 1])
 
     def on_press(self):
@@ -166,6 +184,11 @@ class BotonSecundario(Button):
     pass
 
 
+class BotonMusica(Button):
+    
+    activo = BooleanProperty(True)
+
+
 Builder.load_string(KV)
 
 
@@ -176,7 +199,7 @@ def _hex_a_rgba(codigo_hex: str, alpha: float = 1.0):
 
 
 class TarjetaPrincipal(BoxLayout):
-    """Contenedor tipo 'card' con esquinas redondeadas y sombra suave."""
+    
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -199,7 +222,7 @@ class TarjetaPrincipal(BoxLayout):
 
 
 class RaizFondo(FloatLayout):
-    """Fondo general de la app con un degradado simulado por franjas."""
+    
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -281,15 +304,29 @@ class FacturacionSensoresApp(App):
         )
         tarjeta.bind(minimum_height=tarjeta.setter("height"))
 
-        # --- Encabezado ---
-        tarjeta.add_widget(Label(
+        # --- Encabezado (título + botón de música) ---
+        fila_titulo = BoxLayout(
+            orientation="horizontal",
+            size_hint_y=None,
+            height=dp(36),
+            spacing=dp(8),
+        )
+        etiqueta_titulo = Label(
             text="[b]Facturación de Sensores[/b]",
             markup=True,
             font_size="22sp",
             color=_hex_a_rgba(COLOR_TEXTO),
-            size_hint_y=None,
-            height=dp(34),
-        ))
+            halign="left",
+            valign="middle",
+        )
+        etiqueta_titulo.bind(size=etiqueta_titulo.setter("text_size"))
+        fila_titulo.add_widget(etiqueta_titulo)
+
+        self.boton_musica = BotonMusica(text="Silenciar")
+        self.boton_musica.bind(on_release=self.alternar_musica)
+        fila_titulo.add_widget(self.boton_musica)
+        tarjeta.add_widget(fila_titulo)
+
         tarjeta.add_widget(Label(
             text="Calcula el valor a pagar (incluye IVA del 19%)",
             font_size="13sp",
@@ -349,7 +386,52 @@ class FacturacionSensoresApp(App):
         tarjeta.add_widget(self.panel_resultado)
 
         contenedor_scroll.add_widget(tarjeta)
+
+        self.reproducir_musica()
+
         return raiz
+
+    # ------------------------------------------------------------------
+    # Música de fondo
+    # ------------------------------------------------------------------
+    def reproducir_musica(self):
+        """Carga y reproduce en loop el archivo definido en RUTA_MUSICA.
+        Si el archivo no existe o no se puede cargar, la app sigue
+        funcionando normalmente pero sin sonido."""
+        self.sonido = None
+        if not os.path.isfile(RUTA_MUSICA):
+            print(
+                f"[Música] No se encontró '{RUTA_MUSICA}'. "
+                "La app arrancará sin música de fondo."
+            )
+            if hasattr(self, "boton_musica"):
+                self.boton_musica.opacity = 0
+                self.boton_musica.disabled = True
+            return
+
+        self.sonido = SoundLoader.load(RUTA_MUSICA)
+        if self.sonido:
+            self.sonido.loop = True
+            self.sonido.volume = VOLUMEN_MUSICA
+            self.sonido.play()
+        else:
+            print(f"[Música] No se pudo cargar '{RUTA_MUSICA}'.")
+
+    def alternar_musica(self, *_):
+        if not self.sonido:
+            return
+        if self.boton_musica.activo:
+            self.sonido.volume = 0
+            self.boton_musica.activo = False
+            self.boton_musica.text = "Activar"
+        else:
+            self.sonido.volume = VOLUMEN_MUSICA
+            self.boton_musica.activo = True
+            self.boton_musica.text = "Silenciar"
+
+    def on_stop(self):
+        if getattr(self, "sonido", None):
+            self.sonido.stop()
 
     # ------------------------------------------------------------------
     # Widgets auxiliares
