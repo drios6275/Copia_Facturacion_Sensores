@@ -391,9 +391,7 @@ class FacturacionSensoresApp(App):
 
         return raiz
 
-    # ------------------------------------------------------------------
-    # Música de fondo
-    # ------------------------------------------------------------------
+
     def reproducir_musica(self):
         """Carga y reproduce en loop el archivo definido en RUTA_MUSICA.
         Si el archivo no existe o no se puede cargar, la app sigue
@@ -433,9 +431,7 @@ class FacturacionSensoresApp(App):
         if getattr(self, "sonido", None):
             self.sonido.stop()
 
-    # ------------------------------------------------------------------
-    # Widgets auxiliares
-    # ------------------------------------------------------------------
+
     def _crear_etiqueta(self, texto):
         etiqueta = Label(
             text=texto,
@@ -508,9 +504,7 @@ class FacturacionSensoresApp(App):
         self._panel_resultado_ref = panel
         return panel
 
-    # ------------------------------------------------------------------
-    # Lógica
-    # ------------------------------------------------------------------
+   
     def limpiar_formulario(self, *_):
         self.campo_cliente.text = ""
         self.campo_servicios.text = ""
